@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CMS HSK - Hoàn thiện 100%</title>
-    <!-- Thư viện đọc file Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
@@ -50,13 +49,15 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // BẢN NÂNG CẤP: Nhận diện cả link ảnh thông thường VÀ link Google Drive
+        // BẢN NÂNG CẤP ĐÃ ĐƯỢC FIX LỖI NHẬN DIỆN ẢNH
         function isImage(text) {
             if(!text) return false;
             if(typeof text !== 'string') return false;
             
-            // Nếu link chứa drive.google.com/uc hoặc có đuôi jpg/png thì chắc chắn là ảnh
-            return text.match(/\.(jpeg|jpg|gif|png)$/i) != null || text.includes('drive.google.com/uc');
+            // Bắt buộc phải có đoạn này để nhận ra link ảnh Google Drive lh3
+            return text.match(/\.(jpeg|jpg|gif|png)$/i) != null 
+                || text.includes('drive.google.com/uc') 
+                || text.includes('lh3.googleusercontent.com');
         }
 
         function renderQuiz(data) {
@@ -74,13 +75,11 @@
                 let title = `<div class="question-title">Câu ${row.STT} (${part1} - ${part2}): ${noidung}</div>`;
                 card.innerHTML += title;
 
-                // Xử lý Audio
                 if (row['Link_Audio']) {
                     let audioHtml = `<div class="audio-player"><audio controls><source src="${row.Link_Audio}" type="audio/mpeg">Trình duyệt không hỗ trợ audio.</audio></div>`;
                     card.innerHTML += audioHtml;
                 }
 
-                // Xử lý đáp án (Tự động biến link Drive thành thẻ Image)
                 let optionsHtml = '<div class="options-grid">';
                 ['A', 'B', 'C', 'D'].forEach(opt => {
                     if (row[opt]) {
