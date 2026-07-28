@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS HSK - Hoàn thiện 100%</title>
+    <!-- Thư viện đọc file Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .admin-panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px; border-left: 5px solid #1a73e8; }
+        .student-view { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
+        h1, h2 { color: #2c3e50; }
+        .question-card { border: 1px solid #e0e0e0; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #fafafa; }
+        .question-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #d93025; }
+        .audio-player { margin-bottom: 15px; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .option-item { background: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; }
+        .option-item input { margin-right: 10px; }
+        img.option-img { max-width: 150px; border-radius: 4px; border: 1px solid #ddd; padding: 5px; background: #fff; }
+        input[type="file"] { padding: 10px; border: 1px dashed #1a73e8; background: #e8f0fe; cursor: pointer; width: 100%; box-sizing: border-box;}
+    </style>
+</head>
+<body>
+
+    <div class="admin-panel">
+        <h2>🛠 Web Admin: Upload Dữ Liệu Excel</h2>
+        <input type="file" id="excelFile" accept=".xlsx, .xls">
+    </div>
+
+    <div class="student-view" id="studentView">
+        <h1 style="text-align: center;">BÀI THI HSK 1</h1>
+        <div id="quizContainer"></div>
+    </div>
+
+    <script>
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var data = new Uint8Array(e.target.result);
+                var workbook = XLSX.read(data, {type: 'array'});
+                var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                var jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                renderQuiz(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // BẢN NÂNG CẤP: Nhận diện cả link ảnh thông thường VÀ link Google Drive
+        function isImage(text) {
+            if(!text) return false;
+            if(typeof text !== 'string') return false;
+            
+            // Nếu link chứa drive.google.com/uc hoặc có đuôi jpg/png thì chắc chắn là ảnh
+            return text.match(/\.(jpeg|jpg|gif|png)$/i) != null || text.includes('drive.google.com/uc');
+        }
+
+        function renderQuiz(data) {
+            const container = document.getElementById('quizContainer');
+            container.innerHTML = ''; 
+
+            data.forEach(row => {
+                let card = document.createElement('div');
+                card.className = 'question-card';
+
+                let part1 = row['Part'] || '';
+                let part2 = row['Part_Detail'] || '';
+                let noidung = row['Nọi_Dung_Câu_Hỏi'] || '';
+                
+                let title = `<div class="question-title">Câu ${row.STT} (${part1} - ${part2}): ${noidung}</div>`;
+                card.innerHTML += title;
+
+                // Xử lý Audio
+                if (row['Link_Audio']) {
+                    let audioHtml = `<div class="audio-player"><audio controls><source src="${row.Link_Audio}" type="audio/mpeg">Trình duyệt không hỗ trợ audio.</audio></div>`;
+                    card.innerHTML += audioHtml;
+                }
+
+                // Xử lý đáp án (Tự động biến link Drive thành thẻ Image)
+                let optionsHtml = '<div class="options-grid">';
+                ['A', 'B', 'C', 'D'].forEach(opt => {
+                    if (row[opt]) {
+                        let displayContent = isImage(row[opt]) 
+                            ? `<img src="${row[opt]}" class="option-img" alt="Đáp án ${opt}">` 
+                            : `<span>${row[opt]}</span>`;
+                        
+                        optionsHtml += `
+                            <label class="option-item">
+                                <input type="radio" name="q${row.STT}" value="${opt}">
+                                <strong>${opt}.</strong> &nbsp; ${displayContent}
+                            </label>
+                        `;
+                    }
+                });
+                optionsHtml += '</div>';
+                
+                card.innerHTML += optionsHtml;
+                container.appendChild(card);
+            });
+
+            document.getElementById('studentView').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
